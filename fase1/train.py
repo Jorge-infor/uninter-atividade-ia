@@ -6,222 +6,173 @@ from typing import List, Tuple
 
 class Perceptron:
     """
-    Implementação de um modelo Perceptron — um único neurônio treinado pela Regra Delta.
+    Implementação de um Perceptron (um único neurônio) treinado pela Regra Delta.
 
     Atributos:
-        learning_rate (float): Taxa de aprendizado (η) usada para atualização dos pesos.
-        weights (List[float]): Lista de pesos sinápticos do neurônio.
-        bias (float): Termo de bias (ou limiar).
-        training_log (List[List[str]]): Registro completo do processo de treinamento
-            (usado para exportação em CSV).
+        taxa_aprendizado (float): Taxa de aprendizado (η) usada para ajuste dos pesos.
+        pesos (List[float]): Lista de pesos sinápticos do neurônio.
+        bias (float): Valor de viés (bias) adicionado à ativação total.
     """
 
-    def __init__(self, num_inputs: int, learning_rate: float = 0.1) -> None:
-        """
-        Inicializa o Perceptron com pesos e bias aleatórios.
+    def __init__(self, num_entradas: int, taxa_aprendizado: float = 0.1) -> None:
+        self.taxa_aprendizado: float = taxa_aprendizado
+        self.pesos: List[float] = [random.uniform(-1, 1) for _ in range(num_entradas)]
+        self.bias: float = random.uniform(-1, 1)
 
-        Args:
-            num_inputs (int): Número de entradas (sensores).
-            learning_rate (float): Taxa de aprendizado usada na Regra Delta.
-        """
-        self.learning_rate: float = learning_rate
-        self.weights: List[float] = [round(random.uniform(-1, 1), 2) for _ in range(num_inputs)]
-        self.bias: float = round(random.uniform(-1, 1), 2)
-        self.training_log: List[List[str]] = []  # Armazena dados do treinamento
-
-    def activation(self, x: float) -> int:
-        """
-        Função de ativação degrau binário.
-
-        Retorna:
-            1 se x >= 0, caso contrário -1.
-        """
+    def ativacao(self, x: float) -> int:
+        """Função de ativação degrau binária, retornando 1 ou -1."""
         return 1 if x >= 0 else -1
 
-    def predict(self, inputs: List[float]) -> int:
-        """
-        Calcula a saída do Perceptron para uma entrada específica.
+    def prever(self, entradas: List[float]) -> int:
+        """Calcula a saída do perceptron para uma entrada fornecida."""
+        soma_total = sum(w * e for w, e in zip(self.pesos, entradas)) + self.bias
+        return self.ativacao(soma_total)
 
-        Args:
-            inputs (List[float]): Lista com os valores dos sensores.
-
-        Retorna:
-            int: Saída binária do neurônio (1 ou -1).
-        """
-        total_activation = sum(w * i for w, i in zip(self.weights, inputs)) + self.bias
-        return self.activation(total_activation)
-
-    def train(
+    def treinar(
         self,
-        training_data: List[Tuple[List[float], int]],
-        validation_data: List[Tuple[List[float], int]],
-        max_epochs: int = 100
+        dados_treino: List[Tuple[List[float], int]],
+        dados_validacao: List[Tuple[List[float], int]],
+        max_epocas: int = 100
     ) -> None:
         """
-        Treina o Perceptron utilizando a Regra Delta.
+        Treina o perceptron utilizando a Regra Delta.
 
         Args:
-            training_data: Conjunto de amostras de treinamento (entradas + saída esperada).
-            validation_data: Conjunto de validação usado para testar o modelo.
-            max_epochs: Número máximo de épocas de treinamento.
+            dados_treino: Lista de tuplas (entradas, alvo) para treinamento.
+            dados_validacao: Lista de tuplas (entradas, alvo) para validação.
+            max_epocas: Número máximo de épocas de treinamento.
         """
-        for epoch in range(1, max_epochs + 1):
-            total_error = 0
-            print(f"\n=== Época {epoch} ===")
 
-            for idx, (inputs, expected) in enumerate(training_data, start=1):
-                # Calcula a saída do neurônio
-                output = self.predict(inputs)
+        # Cria um arquivo CSV para registrar o processo de treinamento
+        with open("treinamento.csv", mode="w", newline="", encoding="utf-8") as file:
+            escritor = csv.writer(file, delimiter=";")
+            escritor.writerow([
+                "Época", "Amostra", "Entradas", "Esperado", "Saída", "Erro", "Pesos", "Bias"
+            ])
 
-                # Calcula o erro
-                error = expected - output
-                total_error += abs(error)
+            for epoca in range(1, max_epocas + 1):
+                erro_total = 0
+                print(f"\n=== Época {epoca} ===")
 
-                # Atualiza os pesos segundo a Regra Delta: Δw = η * erro * x
-                for i in range(len(self.weights)):
-                    self.weights[i] += self.learning_rate * error * inputs[i]
+                for idx, (entradas, esperado) in enumerate(dados_treino, start=1):
+                    saida = self.prever(entradas)
+                    erro = esperado - saida
+                    erro_total += abs(erro)
 
-                # Atualiza o bias: Δb = η * erro
-                self.bias += self.learning_rate * error
+                    # Aplicando a Regra Delta: Δw = η * erro * x
+                    for i in range(len(self.pesos)):
+                        self.pesos[i] += self.taxa_aprendizado * erro * entradas[i]
+                    self.bias += self.taxa_aprendizado * erro
 
-                # Arredonda pesos e bias para 2 casas decimais (tanto para print quanto para CSV)
-                rounded_weights = [round(w, 2) for w in self.weights]
-                rounded_bias = round(self.bias, 2)
+                    # Arredonda pesos e bias para 2 casas decimais
+                    pesos_arredondados = [round(p, 2) for p in self.pesos]
+                    bias_arredondado = round(self.bias, 2)
 
-                # Exibe informações da amostra atual
-                print(f"Amostra {idx}: Entradas={[round(v, 2) for v in inputs]}, Esperado={expected}, "
-                      f"Saída={output}, Erro={error}")
-                print(f"Pesos: {rounded_weights}")
-                print(f"Bias: {rounded_bias}\n")
+                    # Mostra no terminal
+                    print(
+                        f"Amostra {idx}: Entradas={entradas}, Esperado={esperado}, "
+                        f"Saída={saida}, Erro={erro}"
+                    )
+                    print(f"Pesos: {pesos_arredondados}")
+                    print(f"Bias: {bias_arredondado}\n")
 
-                # Armazena no log para exportação (exatamente o que foi impresso)
-                self.training_log.append([
-                    epoch,
-                    idx,
-                    *[round(v, 2) for v in inputs],
-                    expected,
-                    output,
-                    error,
-                    str(rounded_weights),
-                    rounded_bias
-                ])
+                    # Salva cada iteração no CSV
+                    escritor.writerow([
+                        epoca,
+                        idx,
+                        entradas,
+                        esperado,
+                        saida,
+                        erro,
+                        pesos_arredondados,
+                        bias_arredondado
+                    ])
 
-            # Avalia o desempenho do modelo no conjunto de validação
-            accuracy = self.evaluate(validation_data)
-            print(f"Acurácia na validação: {accuracy:.2f}%")
+                # Avalia desempenho com dados de validação
+                acuracia = self.avaliar(dados_validacao)
+                print(f"Acurácia na validação: {acuracia:.2f}%")
 
-            # Critério de parada: acurácia total
-            if accuracy == 100.0:
-                print("\nTreinamento concluído com 100% de acurácia.")
-                break
+                # Condição de parada: 100% de acurácia
+                if acuracia == 100.0:
+                    print("\nTreinamento concluído com 100% de acurácia.")
+                    break
 
-        # Exibe os resultados finais
+        # Exibe pesos e bias finais
+        pesos_finais = [round(p, 2) for p in self.pesos]
+        bias_final = round(self.bias, 2)
+
         print("\n=== Treinamento Finalizado ===")
-        print(f"Pesos finais: {[round(w, 2) for w in self.weights]}")
-        print(f"Bias final: {round(self.bias, 2)}")
+        print(f"Pesos finais: {pesos_finais}")
+        print(f"Bias final: {bias_final}")
 
-        # Exporta o log completo do treinamento para um arquivo CSV
-        self.export_training_log("treinamento_log.csv")
+        # Exporta resultados finais para outro CSV
+        with open("resultado.csv", mode="w", newline="", encoding="utf-8") as file_res:
+            escritor_res = csv.writer(file_res, delimiter=";")
+            escritor_res.writerow(["Pesos Finais", "Bias Final"])
+            escritor_res.writerow([pesos_finais, bias_final])
 
-    def evaluate(self, dataset: List[Tuple[List[float], int]]) -> float:
-        """
-        Avalia a acurácia do Perceptron sobre um conjunto de dados.
-
-        Args:
-            dataset: Lista de tuplas (entradas, saída esperada).
-
-        Retorna:
-            float: Percentual de acertos (%).
-        """
-        correct = sum(1 for inputs, expected in dataset if self.predict(inputs) == expected)
-        return (correct / len(dataset)) * 100
-
-    def export_training_log(self, filename: str) -> None:
-        """
-        Exporta os dados completos do treinamento para um arquivo CSV.
-
-        Args:
-            filename (str): Nome do arquivo CSV de saída.
-        """
-        header = [
-            "Época",
-            "Amostra",
-            "Sensor 1",
-            "Sensor 2",
-            "Sensor 3",
-            "Sensor 4",
-            "Sensor 5",
-            "Sensor 6",
-            "Esperado",
-            "Saída",
-            "Erro",
-            "Pesos",
-            "Bias"
-        ]
-        with open(filename, mode="w", newline="", encoding="utf-8") as file:
-            writer = csv.writer(file, delimiter=";")
-            writer.writerow(header)
-            writer.writerows(self.training_log)
-        print(f"\n📁 Dados de treinamento exportados para '{filename}' com sucesso.")
+    def avaliar(self, dados: List[Tuple[List[float], int]]) -> float:
+        """Calcula a acurácia do perceptron em um conjunto de dados."""
+        corretos = sum(1 for entradas, esperado in dados if self.prever(entradas) == esperado)
+        return (corretos / len(dados)) * 100
 
 
-def load_dataset(filepath: str) -> List[Tuple[List[float], int]]:
+def carregar_dados(caminho: str) -> List[Tuple[List[float], int]]:
     """
-    Carrega o conjunto de amostras a partir de um arquivo CSV.
+    Carrega o dataset a partir de um arquivo CSV.
 
-    Formato esperado do CSV:
-        Sensor 1;Sensor 2;Sensor 3;Sensor 4;Sensor 5;Sensor 6;Controle Acionador
+    Formato esperado:
+    Sensor 1;Sensor 2;...;Sensor 6;Controle Acionador
     """
-    dataset: List[Tuple[List[float], int]] = []
-    with open(filepath, newline='', encoding='utf-8') as csvfile:
-        reader = csv.reader(csvfile, delimiter=';')
-        next(reader)  # Ignora o cabeçalho
-        for row in reader:
-            inputs = [float(x) for x in row[:-1]]
-            target = int(row[-1])
-            dataset.append((inputs, target))
-    return dataset
-
-
-def split_dataset(dataset: List[Tuple[List[float], int]], train_ratio: float = 0.7) -> Tuple[
-    List[Tuple[List[float], int]],
-    List[Tuple[List[float], int]]
-]:
-    """
-    Embaralha e divide o conjunto de dados em subconjuntos de treino e validação.
-    """
-    random.shuffle(dataset)
-    split_index = int(len(dataset) * train_ratio)
-    return dataset[:split_index], dataset[split_index:]
+    dados: List[Tuple[List[float], int]] = []
+    with open(caminho, newline="", encoding="utf-8") as csvfile:
+        leitor = csv.reader(csvfile, delimiter=";")
+        next(leitor)  # Ignora o cabeçalho
+        for linha in leitor:
+            entradas = [float(x) for x in linha[:-1]]
+            alvo = int(linha[-1])
+            dados.append((entradas, alvo))
+    return dados
 
 
-def select_statistical_sample(dataset: List[Tuple[List[float], int]], sample_size: int) -> List[Tuple[List[float], int]]:
+def dividir_dados(
+    dados: List[Tuple[List[float], int]],
+    proporcao_treino: float = 0.7
+) -> Tuple[List[Tuple[List[float], int]], List[Tuple[List[float], int]]]:
+    """Embaralha e divide o conjunto de dados em subconjuntos de treino e validação."""
+    random.shuffle(dados)
+    limite = int(len(dados) * proporcao_treino)
+    return dados[:limite], dados[limite:]
+
+
+def amostra_estatistica(
+    dados: List[Tuple[List[float], int]],
+    tamanho_amostra: int
+) -> List[Tuple[List[float], int]]:
     """
-    Seleciona uma amostra estatisticamente representativa do conjunto de dados.
+    Seleciona uma amostra representativa do dataset.
+    Garante que as linhas sejam escolhidas aleatoriamente.
     """
-    if sample_size > len(dataset):
-        sample_size = len(dataset)
-    return random.sample(dataset, sample_size)
+    if tamanho_amostra > len(dados):
+        tamanho_amostra = len(dados)
+    return random.sample(dados, tamanho_amostra)
 
 
 def main() -> None:
-    """
-    Função principal que coordena o carregamento dos dados,
-    treinamento e validação do Perceptron.
-    """
+    """Rotina principal de carregamento, treinamento e validação do Perceptron."""
     random.seed(42)
-    filepath = "amostras.csv"
+    caminho = "amostras.csv"
 
-    # Carrega e seleciona uma amostra representativa
-    dataset = load_dataset(filepath)
-    sample = select_statistical_sample(dataset, sample_size=30)
+    # Carrega e seleciona amostra estatisticamente representativa
+    dados = carregar_dados(caminho)
+    amostra = amostra_estatistica(dados, tamanho_amostra=30)
 
-    # Divide em treino e validação
-    training_data, validation_data = split_dataset(sample)
+    # Divide a amostra entre treino e validação
+    treino, validacao = dividir_dados(amostra)
 
-    # Inicializa e treina o Perceptron
-    perceptron = Perceptron(num_inputs=6, learning_rate=0.005)
-    perceptron.train(training_data, validation_data, max_epochs=100)
+    # Inicializa e treina o perceptron
+    perceptron = Perceptron(num_entradas=6, taxa_aprendizado=0.005)
+    perceptron.treinar(treino, validacao, max_epocas=100)
 
 
 if __name__ == "__main__":

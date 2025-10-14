@@ -1,86 +1,68 @@
 """
-Implementação do Neurônio Treinado (Perceptron de 6 entradas)
+Simulação do Neurônio Treinado em Microcontrolador
 
-Este programa simula o comportamento de um neurônio treinado
-em um microcontrolador para controle de um forno industrial.
-
-Objetivo:
-    - Receber 6 valores de sensores (entradas).
-    - Calcular a soma ponderada utilizando os pesos sinápticos treinados.
-    - Aplicar a função de ativação degrau binária:
-        Se soma >= 0 → saída = 1  (manter forno ativo)
-        Se soma < 0 → saída = -1 (parar e desligar forno)
-    - Imprimir a decisão simulando o comando ao atuador.
+Este programa mantém o microcontrolador "ligado" e realiza leituras
+periódicas de 6 sensores simulados. Para cada leitura, calcula a saída
+do neurônio e exibe a decisão de manter o forno ativo ou desligar.
 """
 
+import random
+import time
 from typing import List
 
-
+# --- Função de ativação degrau ---
 def ativacao(soma: float) -> int:
     """
-    Função de ativação degrau binária.
-
-    Args:
-        soma (float): Soma ponderada das entradas com seus pesos.
-
-    Returns:
-        int: 1 para manter o forno ativo, -1 para desligar.
+    Função de ativação binária.
+    Retorna:
+        1 → Manter forno ativo
+        -1 → Parar e desligar forno
     """
     return 1 if soma >= 0 else -1
 
-
-def neuronio(entradas: List[float]) -> int:
+# --- Função do neurônio ---
+def neuronio(entradas: List[int]) -> int:
     """
-    Executa o cálculo da saída do neurônio com base nas entradas.
-
-    Args:
-        entradas (List[float]): Lista com os 6 valores dos sensores.
-
-    Returns:
-        int: Saída do neurônio (1 ou -1).
+    Calcula a saída do neurônio com base nas entradas fornecidas.
     """
-
-    # === INSIRA AQUI OS PESOS FINAIS DO TREINAMENTO ===
-    # Exemplo de pesos fictícios (substitua pelos seus valores reais)
+    # === PESOS FINAIS DO TREINAMENTO ===
     pesos = [-0.03, -0.03, 0.15, 0.17, -0.11, 0.04]
-    bias = -0.75  # Exemplo de bias final
+    bias = -0.75
 
-    # Calcula soma ponderada das entradas
     soma_total = sum(p * e for p, e in zip(pesos, entradas)) + bias
-
-    # Aplica função de ativação
     saida = ativacao(soma_total)
-
     return saida
 
-
+# --- Função principal ---
 def main() -> None:
     """
-    Função principal que simula a leitura dos sensores e
-    a decisão do neurônio.
+    Simula o microcontrolador em operação contínua.
+    Leitura periódica dos sensores (mock) e cálculo do neurônio.
     """
-    print("=== Simulação do Neurônio no Forno Industrial ===")
-    print("Insira os valores dos 6 sensores (separados por espaço):")
+    print("=== Simulação do Microcontrolador do Forno ===")
+    print("Pressione Ctrl+C para encerrar a simulação.\n")
 
     try:
-        # Lê entradas do usuário
-        entradas = list(map(float, input("Sensores: ").strip().split()))
+        while True:
+            # --- Mock: gera 6 leituras inteiras de sensores entre -9 e 9 ---
+            sensores = [random.randint(-9, 9) for _ in range(6)]
 
-        if len(entradas) != 6:
-            print("Erro: É necessário inserir exatamente 6 valores de sensores.")
-            return
+            # Calcula saída do neurônio
+            saida = neuronio(sensores)
 
-        # Calcula a saída do neurônio
-        saida = neuronio(entradas)
+            # Exibe entradas e saída
+            print(f"Sensores: {sensores}")
+            if saida == 1:
+                print("Saída do neurônio: 1 → Manter forno ATIVO 🔥\n")
+            else:
+                print("Saída do neurônio: -1 → Desligar forno e parar esteiras 🧊\n")
 
-        # Exibe o resultado (simulação do atuador)
-        if saida == 1:
-            print("\nSaída do neurônio: 1 → Manter o forno ATIVO 🔥")
-        else:
-            print("\nSaída do neurônio: -1 → Desligar forno e parar esteiras 🧊")
+            # Intervalo de leitura (simula periodicidade)
+            time.sleep(2)  # 2 segundos entre leituras
 
-    except ValueError:
-        print("Erro: Insira apenas números válidos separados por espaço.")
+    except KeyboardInterrupt:
+        # Simula desligamento do microcontrolador
+        print("\nSimulação encerrada pelo usuário. Microcontrolador desligado.")
 
 
 if __name__ == "__main__":
